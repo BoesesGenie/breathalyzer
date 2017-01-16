@@ -13,8 +13,8 @@ if (!file_exists($argv[1])) {
     exit;
 }
 
-$input = explode(' ', trim(preg_replace('/\s+/', ' ', file_get_contents($argv[1]))));
-$rawVocabulary = explode("\n", strtolower(trim(file_get_contents('vocabulary.txt'))));
+$input = explode(' ', trim(preg_replace('/\s+/', ' ', strtoupper(file_get_contents($argv[1])))));
+$rawVocabulary = explode("\n", trim(file_get_contents('vocabulary.txt')));
 $vocabulary = [];
 foreach ($rawVocabulary as $dWord) { // Index by string length
     $vocabulary[strlen($dWord)][] = $dWord;
