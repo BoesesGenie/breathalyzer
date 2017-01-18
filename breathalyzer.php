@@ -55,9 +55,7 @@ foreach ($input as $inputWord) {
         if ($isUpperKey) {
             $treeKey += $keyStep;
             $vocabularyWordLength = isset($treeKeys[$treeKey]) ? $treeKeys[$treeKey] : $upperBound;
-        }
-
-        if (!$isUpperKey) {
+        } else {
             $treeKey -= $keyStep;
             $vocabularyWordLength = isset($treeKeys[$treeKey]) ? $treeKeys[$treeKey] : 0;
         }
