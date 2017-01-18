@@ -1,8 +1,4 @@
 <?php
-$time = microtime(true);
-
-const DEBUG_MODE = false;
-
 if (!isset($argv[1])) {
     echo "Input file required.\n";
     exit;
@@ -14,89 +10,63 @@ if (!file_exists($argv[1])) {
 }
 
 $input = explode(' ', trim(preg_replace('/\s+/', ' ', file_get_contents($argv[1]))));
-$rawVocabulary = explode("\n", strtolower(trim(file_get_contents('vocabulary.txt'))));
+$rawVocabulary = explode("\n", strtolower(str_replace("\r", '', trim(file_get_contents('vocabulary.txt')))));
 $vocabulary = [];
-foreach ($rawVocabulary as $dWord) { // Index by string length
-    $vocabulary[strlen($dWord)][] = $dWord;
+foreach ($rawVocabulary as $vocabularyWord) { // Index by string length
+    $vocabulary[strlen($vocabularyWord)][] = $vocabularyWord;
 }
 
 $treeKeys = array_keys($vocabulary);
 sort($treeKeys);
-$treeKeysCnt = count($treeKeys);
+$upperBound = end($treeKeys) + 1;
 $rawVocabulary = array_flip($rawVocabulary);
-$dist = 0;
-foreach ($input as $uWord) {
-    if (isset($rawVocabulary[$uWord])) { // Full match
+$distanceSum = 0;
+foreach ($input as $inputWord) {
+    if (isset($rawVocabulary[$inputWord])) { // Full match
         continue;
     }
 
-    $min = -1;
-    $uLen = strlen($uWord);
-    $vocKey = 0;
+    $minimumDistance = -1;
+    $inputWordLength = strlen($inputWord);
     $treeKey = 0;
-    foreach ($treeKeys as $treeKey => $length) { // Find tree root
-        if ($length >= $uLen) {
+    $vocabularyWordLength = 0;
+    foreach ($treeKeys as $treeKey => $vocabularyWordLength) { // Find tree root
+        if ($vocabularyWordLength >= $inputWordLength) {
             break;
         }
     }
 
-    $vocKey = $length;
-    $keyDiff = 0;
-    $isMaxKey = true;
+    $keyStep = 0;
+    $isUpperKey = true;
     do {
-        if (isset($vocabulary[$vocKey])) {
-            foreach ($vocabulary[$vocKey] as $dWord) {
-                if ($min < 0) {
-                    $min = levenshtein($uWord, $dWord);
-                    continue;
-                }
-
-                $newDist = levenshtein($uWord, $dWord);
-                if ($newDist < $min) {
-                    $min = $newDist;
-                    if ($min == 1) { // Shortest distance found
+        if (isset($vocabulary[$vocabularyWordLength])) {
+            foreach ($vocabulary[$vocabularyWordLength] as $vocabularyWord) {
+                $newDistance = levenshtein($inputWord, $vocabularyWord);
+                if ($minimumDistance < 0 || $newDistance < $minimumDistance) {
+                    $minimumDistance = $newDistance;
+                    if ($minimumDistance == 1) { // Shortest distance found
                         break 2;
                     }
                 }
             }
         }
 
-        $check = false;
-        if ($isMaxKey) {
-            ++$keyDiff;
-            $treeKey += $keyDiff;
-            if (isset($treeKeys[$treeKey])) {
-                $vocKey = $treeKeys[$treeKey];
-                $check = true;
-            } else {
-                $vocKey = $treeKeysCnt;
-            }
+        ++$keyStep;
+        if ($isUpperKey) {
+            $treeKey += $keyStep;
+            $vocabularyWordLength = isset($treeKeys[$treeKey]) ? $treeKeys[$treeKey] : $upperBound;
         }
 
-        if (!$isMaxKey) {
-            ++$keyDiff;
-            $treeKey -= $keyDiff;
-            if (isset($treeKeys[$treeKey])) {
-                $vocKey = $treeKeys[$treeKey];
-                $check = true;
-            } else {
-                $vocKey = -1;
-            }
+        if (!$isUpperKey) {
+            $treeKey -= $keyStep;
+            $vocabularyWordLength = isset($treeKeys[$treeKey]) ? $treeKeys[$treeKey] : 0;
         }
 
-        if (!$check) {
-            break;
-        }
+        $isUpperKey = !$isUpperKey;
+    } while ($minimumDistance > abs($inputWordLength - $vocabularyWordLength)
+        && ($vocabularyWordLength > 0 || $vocabularyWordLength < $upperBound));
 
-        $isMaxKey = !$isMaxKey;
-    } while ($min > abs($uLen - $vocKey));
-
-    $dist += $min;
+    $distanceSum += $minimumDistance;
 }
 
-echo $dist . "\n";
-
-if (DEBUG_MODE) {
-    $time = microtime(true) - $time;
-    echo $time . "\n";
-}
+echo $distanceSum . "\n";
